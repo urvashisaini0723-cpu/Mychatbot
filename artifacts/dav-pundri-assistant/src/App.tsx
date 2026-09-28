@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { getHealthCheckQueryKey, getSendChatMessageUrl, useHealthCheck, useSendChatMessage } from '@workspace/api-client-react';
+import { getHealthCheckQueryKey, getSendChatMessageUrl, useHealthCheck } from '@workspace/api-client-react';
 import type { ChatMessage } from '@workspace/api-client-react';
 import { ArrowUp, Check, CircleAlert, Clock3, Copy, ExternalLink, Info, LifeBuoy, Loader2, MapPin, Menu, MessageCircle, Phone, Plus, RotateCcw, Send, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
@@ -73,6 +73,29 @@ function MarkdownMessage({ content }: { content: string }) {
       })}
     </div>
   );
+}
+
+function parseErrorMessage(body: string, status: number) {
+  try {
+    const parsed = JSON.parse(body) as { error?: unknown };
+    if (typeof parsed.error === 'string' && parsed.error.trim()) return parsed.error;
+  } catch {
+    // Keep the server's plain-text error when it is not JSON.
+  }
+  return body.trim() || `The school office link returned ${status}.`;
+}
+
+function parseSseLine(line: string) {
+  const normalized = line.replace(/^\uFEFF/, '');
+  if (!normalized.startsWith('data:')) return '';
+  const payload = normalized.slice(5).trimStart();
+  if (!payload || payload === '[DONE]') return '';
+  try {
+    const parsed = JSON.parse(payload) as unknown;
+    return typeof parsed === 'string' ? parsed : '';
+  } catch {
+    return '';
+  }
 }
 
 function ChatBubble({ message, onCopy }: { message: ConversationMessage; onCopy: (content: string) => void }) {
@@ -154,9 +177,6 @@ function ChatExperience({ widget = false }: { widget?: boolean }) {
   const [mobileInfoOpen, setMobileInfoOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const sendMutation = useSendChatMessage();
-  const mutateAsyncRef = useRef(sendMutation.mutateAsync);
-  mutateAsyncRef.current = sendMutation.mutateAsync;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -181,7 +201,12 @@ function ChatExperience({ widget = false }: { widget?: boolean }) {
   const streamResponse = useCallback(async (history: ConversationMessage[], assistantId: string) => {
     const controller = new AbortController();
     abortRef.current = controller;
-    const payload = { messages: history.slice(-10).map(({ role, content }) => ({ role, content })) };
+    const payload = {
+      messages: history
+        .slice(-10)
+        .filter(({ content }) => content.trim().length > 0)
+        .map(({ role, content }) => ({ role, content })),
+    };
     const response = await fetch(getSendChatMessageUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream, text/plain' },
@@ -191,11 +216,15 @@ function ChatExperience({ widget = false }: { widget?: boolean }) {
     });
     if (!response.ok) {
       const body = await response.text();
-      throw new Error(body || `The school office link returned ${response.status}.`);
+      throw new Error(parseErrorMessage(body, response.status));
     }
     if (!response.body) {
       const text = await response.text();
-      setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, content: text, streaming: false } : message));
+      const content = text
+        .split(/\r?\n/)
+        .map(parseSseLine)
+        .join('');
+      setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, content, streaming: false } : message));
       return;
     }
     const reader = response.body.getReader();
@@ -213,25 +242,13 @@ function ChatExperience({ widget = false }: { widget?: boolean }) {
       const lines = buffer.split(/\r?\n/);
       buffer = lines.pop() ?? '';
       for (const line of lines) {
-        if (!line.trim()) continue;
-        const payload = line.startsWith('data:') ? line.slice(5).trimStart() : line;
-        if (payload === '[DONE]') continue;
-        try {
-          append(JSON.parse(payload) as string);
-        } catch {
-          append(payload);
-        }
+        const content = parseSseLine(line);
+        if (content) append(content);
       }
     }
     if (buffer.trim()) {
-      const payload = buffer.startsWith('data:') ? buffer.slice(5).trimStart() : buffer;
-      if (payload !== '[DONE]') {
-        try {
-          append(JSON.parse(payload) as string);
-        } catch {
-          append(payload);
-        }
-      }
+      const content = parseSseLine(buffer);
+      if (content) append(content);
     }
     setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, streaming: false } : message));
   }, []);
@@ -248,17 +265,10 @@ function ChatExperience({ widget = false }: { widget?: boolean }) {
     setStreamError('');
     setIsStreaming(true);
     void streamResponse(nextMessages, assistantId)
-      .catch(async (error: unknown) => {
+      .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') return;
-        // The generated mutation remains a safe non-streaming fallback for deployments that buffer the stream.
-        try {
-          const fallback = await mutateAsyncRef.current({ data: { messages: nextMessages.slice(-10).filter((message) => !message.streaming).map(({ role, content }) => ({ role, content })) } });
-          setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, content: fallback || 'I could not find a response. Please confirm this with the school office.', streaming: false } : message));
-          setStreamError('');
-        } catch {
-          setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, content: '', streaming: false } : message));
-          setStreamError(error instanceof Error ? error.message : 'The assistant is unavailable right now.');
-        }
+        setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, content: '', streaming: false } : message));
+        setStreamError(error instanceof Error ? error.message : 'The assistant is unavailable right now.');
       })
       .finally(() => setIsStreaming(false));
   }, [isStreaming, messages, streamResponse]);
