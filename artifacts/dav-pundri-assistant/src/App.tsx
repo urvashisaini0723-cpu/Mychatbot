@@ -10,6 +10,7 @@ import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
+const apiBaseUrl = import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, '') || '';
 
 type ConversationMessage = ChatMessage & { id: string; streaming?: boolean };
 
@@ -207,7 +208,7 @@ function ChatExperience({ widget = false }: { widget?: boolean }) {
         .filter(({ content }) => content.trim().length > 0)
         .map(({ role, content }) => ({ role, content })),
     };
-    const response = await fetch(getSendChatMessageUrl(), {
+    const response = await fetch(`${apiBaseUrl}${getSendChatMessageUrl()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream, text/plain' },
       credentials: 'include',

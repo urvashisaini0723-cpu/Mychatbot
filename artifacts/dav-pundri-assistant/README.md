@@ -28,7 +28,7 @@ pnpm --filter @workspace/dav-pundri-assistant run build
 pnpm --filter @workspace/api-server run build
 ```
 
-The frontend is a static Vite build, and the API is an Express service. For Vercel, deploy the frontend as a Vite project and deploy the API service separately (or move `artifacts/api-server/src/routes/chat.ts` into a Vercel Route Handler). Set `GROQ_API_KEY` and `GROQ_MODEL` in the server deployment environment, never in browser-exposed variables.
+The frontend is a static Vite build, and the API is an Express service. For Vercel, deploy the API service separately first; the API project uses `artifacts/api-server/index.ts` as its serverless Express entrypoint. Then deploy the frontend as a Vite project. Set `GROQ_API_KEY` and `GROQ_MODEL` only in the API project's environment variables. Set `VITE_API_URL` in the frontend project to the API deployment origin, without `/api` at the end. Never expose `GROQ_API_KEY` through a `VITE_` variable.
 
 ## Included behavior
 
