@@ -1,0 +1,1 @@
+- [Groq model availability](groq-model-availability.md) — a valid Groq key may not expose the requested model; resolve against the account's model list before streaming.
