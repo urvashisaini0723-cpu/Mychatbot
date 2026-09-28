@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "DAV Pundri Assistant"
+description = "A professional bilingual AI chat assistant for DAV Public School, Pundri that helps parents, students, visitors, and staff get confirmed school information."
+version = "1.0.0"
+id = "artifacts/dav-pundri-assistant"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24462
+
+[services.development]
+run = "pnpm --filter @workspace/dav-pundri-assistant run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/dav-pundri-assistant", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/dav-pundri-assistant/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24462"
+BASE_PATH = "/"

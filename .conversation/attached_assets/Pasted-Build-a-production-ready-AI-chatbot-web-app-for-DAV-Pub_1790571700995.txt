@@ -1,0 +1,55 @@
+Build a production-ready AI chatbot web app for "DAV Public School, Pundri" (Kaithal, Haryana). It must answer questions from parents, students, visitors and staff professionally.
+
+TECH STACK (must deploy cleanly on Vercel)
+- Next.js (App Router) + TypeScript + Tailwind CSS.
+- Backend: Next.js Route Handler at /app/api/chat/route.ts calling the Groq API (https://api.groq.com/openai/v1/chat/completions) with streaming responses.
+- Env vars: GROQ_API_KEY (never exposed to the browser) and GROQ_MODEL (default "llama-3.3-70b-versatile").
+- Make sure `npm run build` passes with zero errors and no Replit-only dependencies, so it deploys on Vercel directly.
+- Add .env.example and a README with Vercel deploy steps.
+
+UI
+- Clean, mobile-first, modern chat UI. School colours: maroon/saffron with white. Header: "DAV Public School, Pundri – Assistant".
+- Streaming replies, typing indicator, markdown rendering, auto-scroll, "New chat" button.
+- Quick-question chips: Admissions, Fee Structure, School Timings, Contact Us, Facilities, Transport.
+- Floating chat-widget mode as well as full-page mode.
+- Bilingual: reply in the language the user writes in (Hindi, English or Hinglish).
+
+BACKEND
+- Keep last ~10 messages as context. Temperature 0.3, max_tokens ~600.
+- Basic rate limiting per IP, input length limit (500 chars), friendly error messages if Groq fails.
+
+SYSTEM PROMPT (put in lib/systemPrompt.ts, include the knowledge base below)
+- Role: polite, professional, warm school office assistant for DAV Public School, Pundri.
+- Answer ONLY from the knowledge base. If information is missing or uncertain, never invent it. Say: "Iski confirm jankari ke liye kripya school office se sampark karein" and give the contact details.
+- Never invent fees, dates, names or policies. Keep answers short, clear and well-formatted. Politely decline unrelated topics (politics, harmful content) and steer back to school topics. Simple general study help is fine.
+- End admission or fee answers by suggesting a visit or call to the school office.
+
+KNOWLEDGE BASE (lib/schoolData.ts, easy to edit)
+Verified:
+- Name: DAV Public School, Pundri, District Kaithal, Haryana – 136026
+- Board: CBSE, Affiliation No. 530287 (valid 01-04-2025 to 31-03-2030)
+- Management: DAV College Managing Committee, New Delhi (DAV chain)
+- Established: 1984, co-educational, classes Nursery to 12th
+- Streams (Sr. Secondary): PCM (Science with Maths), PCB (Science with Bio), Commerce, Arts
+- Principal: Mrs. Sadhana Bakshi (M.A., B.Ed)
+- Campus: Junior Wing – Habri Road, Pundri; Senior Wing – Karnal Road, Pundri
+- Phone: 70562-98895, 01746-470053
+- Email: davpundri.ktl@gmail.com
+- Website: davpundri.com / davpundri.in
+- Approx. scale (third-party listing, may be outdated): ~2,000+ students, ~85 teachers, ~75 classrooms
+- Facilities listed: CCTV security, health check-ups
+To fill (leave clearly marked so the owner can complete them):
+- Fee structure by class: [FILL]
+- School timings (summer/winter): [FILL]
+- Admission process, dates, documents, age criteria: [FILL]
+- Transport/bus routes and fees: [FILL]
+- Uniform, books, holidays, exam schedule: [FILL]
+- Labs, library, sports, smart classes, activities: [FILL]
+- Results, achievements, house system, faculty: [FILL]
+
+If a field still says [FILL], the bot must treat it as unknown and refer the user to the school office.
+
+EXTRA
+- Add an /admin-free approach: all data is edited only in lib/schoolData.ts.
+- Add a small footer: "AI assistant – for confirmed details please contact the school office."
+- Generate clean, commented code and a short README.
