@@ -1,4 +1,5 @@
 🤖 DAV Pundri AI Assistant
+<img width="1102" height="624" alt="CHATBOT IMAGE" src="https://github.com/user-attachments/assets/6b1becee-edc4-4b66-8e98-45876772d3a0" />
 
 🌐 Live Application
 - Chatbot: https://dav-pundri-ai-assistant--urvashisaini072.replit.app/
